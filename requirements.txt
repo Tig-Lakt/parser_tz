@@ -1,0 +1,31 @@
+# Web requests
+aiohttp==3.9.5
+aiohttp[speedups]
+
+# Async PostgreSQL driver
+asyncpg==0.29.0
+
+# Sync PostgreSQL driver (для Alembic и Selenium части)
+psycopg2-binary==2.9.9
+
+# ORM
+sqlalchemy==2.0.30
+
+# Migrations
+alembic==1.13.1
+
+# Settings
+pydantic-settings==2.2.1
+
+# Browser automation
+undetected-chromedriver==3.5.5
+selenium==4.21.0
+
+# Virtual display (Linux/VPS only)
+pyvirtualdisplay==3.0
+
+# Excel
+openpyxl==3.1.2
+
+# Utilities
+setuptools==70.0.0   # нужен для undetected-chromedriver на Python 3.12+

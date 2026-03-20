@@ -1,0 +1,63 @@
+version: "3.9"
+
+services:
+
+  # ─────────────────────────── PostgreSQL ───────────────────────
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${DB_NAME:-parser}
+      POSTGRES_USER:     ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    volumes:
+      # Данные БД сохраняются между перезапусками
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      # Порт доступен локально для отладки через DBeaver/pgAdmin
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-parser}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────── Parser ───────────────────────────
+  parser:
+    build: .
+    restart: "no"   # парсер — разовая задача, не перезапускаем
+    depends_on:
+      db:
+        condition: service_healthy   # ждём пока БД готова
+    environment:
+      # БД — берётся из .env или используются дефолты
+      DB_HOST:     db                # имя сервиса в docker network
+      DB_PORT:     ${DB_PORT:-5432}
+      DB_NAME:     ${DB_NAME:-parser}
+      DB_USER:     ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+
+      # Парсер
+      CHROME_VERSION:       ${CHROME_VERSION:-145}
+      CHROME_HEADLESS:      ${CHROME_HEADLESS:-true}
+      DELAY_BETWEEN_CASES:  ${DELAY_BETWEEN_CASES:-2.0}
+      DELAY_BETWEEN_INNS:   ${DELAY_BETWEEN_INNS:-1.5}
+      MAX_CONCURRENT_INNS:  ${MAX_CONCURRENT_INNS:-3}
+      MAX_RETRIES:          ${MAX_RETRIES:-3}
+
+      # Логирование
+      LOG_LEVEL:       ${LOG_LEVEL:-INFO}
+      LOG_FILE:        logs/parser.log
+      LOG_MAX_BYTES:   ${LOG_MAX_BYTES:-10485760}
+      LOG_BACKUP_COUNT: ${LOG_BACKUP_COUNT:-5}
+
+    volumes:
+      # xlsx с ИНН — кладём в ./data/inns.xlsx на хосте
+      - ./data:/app/data
+      # Логи доступны на хосте в ./logs/
+      - ./logs:/app/logs
+    # Передаём устройства для виртуального дисплея
+    shm_size: "256mb"    # увеличиваем shared memory для Chromium
+
+volumes:
+  postgres_data:
